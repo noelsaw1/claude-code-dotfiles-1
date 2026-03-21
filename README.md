@@ -1,51 +1,53 @@
-# Claude Code Dotfiles — Auto-Sync Your Config Across Machines
+# How to Sync Claude Code Settings Across Multiple Machines
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-5C4EE5?logo=anthropic&logoColor=white)
 ![Shell](https://img.shields.io/badge/Shell-zsh%20%7C%20bash-89E051?logo=gnubash&logoColor=white)
 ![Git](https://img.shields.io/badge/Sync-Git-F05032?logo=git&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)
 
-> **Stop re-configuring Claude Code every time you switch computers.**
-> This guide shows you how to version your Claude Code dotfiles and keep them automatically in sync between your work laptop, personal laptop, and any future machine — using nothing but Git and a shell function.
+**Claude Code dotfiles** let you version-control your `~/.claude` directory — including `CLAUDE.md`, custom slash commands, settings, hooks, and agents — so your AI coding environment stays in sync across every machine you use. No extra tools required: just Git and a shell function.
 
----
-
-## What This Does
-
-A **dotfiles setup for Claude Code** — version your `~/.claude` directory in Git so your AI coding environment follows you everywhere.
+> This approach works with any terminal-based AI coding assistant that stores config in a dotfiles directory. The examples below focus on [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Anthropic's CLI for software engineering.
 
 ---
 
-## Why This Exists
+## What Is Inside This Repo
 
-If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code) as your AI coding assistant, you probably have:
-
-- A carefully crafted `CLAUDE.md` with instructions, preferences, and context
-- Custom slash commands in `commands/` you built over time
-- A `settings.json` tuned to your model and preferences
-- Maybe hooks, agents, or rules that make Claude behave exactly the way you want
-
-The problem? **All of that lives in `~/.claude` and goes nowhere.** Switch to your work machine and you're starting from zero. Get a new laptop and you lose everything.
-
-This dotfiles repo solves that with a simple, no-dependency approach: treat `~/.claude` as a Git repo, sync it to GitHub, and add a one-function shell wrapper that pulls on open and pushes on close.
-
----
-
-## What Gets Synced
-
-| File / Folder | What It Is |
-|---------------|------------|
-| `CLAUDE.md` | Your global instructions, preferences, and context for Claude |
-| `settings.json` | Model selection, plugins, and environment config |
-| `commands/` | Custom slash commands |
-| `hooks/` | Shell hooks that run before/after Claude tool calls |
+| File / Folder | Purpose |
+|---------------|---------|
+| [claude-code-skills/](./claude-code-skills/) | Reusable Claude Code skills for AWS — architecture diagrams in draw.io, and more |
+| `CLAUDE.md` | Global instructions, preferences, and context that Claude reads at session start |
+| `settings.json` | Model selection, permissions, and environment config |
+| `commands/` | Custom slash commands (`.md` files) available in every session |
+| `hooks/` | Shell hooks that run before or after Claude tool calls |
 | `agents/` | Custom sub-agents with specialized behaviors |
 | `rules/` | Reusable rule sets for specific workflows |
 
-**What does NOT get synced** (by design):
+---
 
-| Ignored | Why |
-|---------|-----|
-| `cache/`, `backups/`, `file-history/` | Local ephemeral data, irrelevant on other machines |
+## Why Sync Claude Code Config With Git
+
+If you use Claude Code as your AI coding assistant, you likely have:
+
+- A carefully crafted `CLAUDE.md` with instructions, preferences, and context
+- Custom slash commands in `commands/` you built over time
+- A `settings.json` tuned to your workflow
+- Hooks, agents, or rules that shape how Claude behaves
+
+**All of that lives in `~/.claude` and stays on one machine.** Switch to your work laptop and you start from zero. Get a new computer and you lose everything.
+
+This dotfiles repo fixes that: treat `~/.claude` as a Git repository, push it to GitHub, and add a shell wrapper that pulls on open and pushes on close — automatically.
+
+---
+
+## What Files Are Excluded From Sync
+
+These files are machine-specific or sensitive and are excluded via `.gitignore`:
+
+| Excluded | Reason |
+|----------|--------|
+| `cache/`, `backups/`, `file-history/` | Local ephemeral data, not portable |
 | `history.jsonl` | Conversation history — private and machine-specific |
 | `projects/`, `shell-snapshots/`, `paste-cache/` | Machine-specific runtime data |
 | `plugins/`, `plans/`, `session-env/` | Local runtime state |
@@ -63,9 +65,9 @@ This dotfiles repo solves that with a simple, no-dependency approach: treat `~/.
 
 ---
 
-## Part 1 — First-Time Setup
+## How to Set Up Claude Code Dotfiles (First Machine)
 
-Do this once, on your main machine.
+Do this once, on your primary machine.
 
 ### Step 1 — Create the GitHub repo
 
@@ -76,9 +78,9 @@ gh repo create claude-code-dotfiles --public
 # Option B: go to github.com/new and create it manually
 ```
 
-> 💡 **Public or private?** Public repos let the community learn from your config. Private keeps it just for you. Either works — just never put secrets in `CLAUDE.md`.
+> **Public or private?** Public repos let the community learn from your config. Private keeps it just for you. Either works — never put secrets in `CLAUDE.md`.
 
-### Step 2 — Initialize git in `~/.claude`
+### Step 2 — Initialize Git in `~/.claude`
 
 ```bash
 cd ~/.claude
@@ -142,7 +144,7 @@ Your config is now on GitHub.
 
 ---
 
-## Part 2 — Setting Up on a New Machine
+## How to Clone Claude Code Config on a New Machine
 
 Do this on every other computer where you want your config.
 
@@ -160,26 +162,26 @@ git clone git@github.com:YOUR-USERNAME/claude-code-dotfiles.git ~/.claude
 
 Your `CLAUDE.md`, commands, and settings are now in place instantly.
 
-### Step 3 — Add the auto-sync function to your shell
+### Step 3 — Add the auto-sync shell function
 
 Open `~/.zshrc` (or `~/.bashrc`) and add:
 
 ```bash
 # Auto-sync Claude Code config across machines
 claude() {
-  echo "🔄 Syncing Claude config..."
+  echo "Syncing Claude config..."
   git -C ~/.claude pull origin main --quiet
 
   command claude "$@"
 
-  echo "💾 Saving config changes..."
+  echo "Saving config changes..."
   git -C ~/.claude add CLAUDE.md settings.json commands/ hooks/ agents/ rules/ 2>/dev/null
   if ! git -C ~/.claude diff --cached --quiet; then
     git -C ~/.claude commit -m "chore: sync config $(date '+%Y-%m-%d %H:%M')"
     git -C ~/.claude push origin HEAD:main --quiet
-    echo "✅ Config updated on GitHub"
+    echo "Config updated on GitHub"
   else
-    echo "✅ No changes"
+    echo "No changes"
   fi
 }
 ```
@@ -190,7 +192,7 @@ Reload your shell:
 source ~/.zshrc
 ```
 
-### How it works from here
+### How the auto-sync works
 
 Every time you run `claude`:
 
@@ -200,9 +202,9 @@ Every time you run `claude`:
 
 ---
 
-## Part 3 — Customizing Your Config
+## How to Customize Your Claude Code Config
 
-### CLAUDE.md — Your global instructions
+### CLAUDE.md — Global instructions for every session
 
 This is the most powerful file. Claude reads it at the start of every session. Use it to define:
 
@@ -225,7 +227,7 @@ Example:
 - When in doubt, ask before making irreversible changes.
 ```
 
-> ⚠️ **Security reminder**: If your repo is public, `CLAUDE.md` is public too. Never put account IDs, API keys, internal URLs, or personal information in it.
+> **Security reminder**: If your repo is public, `CLAUDE.md` is public too. Never put account IDs, API keys, internal URLs, or personal information in it.
 
 ### Custom slash commands
 
@@ -259,7 +261,7 @@ The script below converts your Claude commands to Kiro steering files automatica
 mkdir -p ~/.claude/hooks
 cat > ~/.claude/hooks/sync-to-kiro.sh << 'EOF'
 #!/bin/bash
-# Syncs ~/.claude/commands/*.md → ~/.kiro/steering/
+# Syncs ~/.claude/commands/*.md to ~/.kiro/steering/
 # Strips Claude frontmatter (name/description) and adds Kiro's inclusion: manual
 
 CLAUDE_COMMANDS="$HOME/.claude/commands"
@@ -371,8 +373,54 @@ Then rotate the secret — pushing to GitHub exposes it even after deletion unle
 
 ## Security Best Practices
 
-- ✅ Use an explicit allowlist in `.gitignore` rather than a blocklist
-- ✅ Never put credentials, API keys, or account IDs in `CLAUDE.md` or `settings.json`
-- ✅ Keep cloud credentials in their respective CLI config files (`~/.aws/credentials`, etc.), not here
-- ✅ If using a public repo, review every commit before pushing
-- ✅ Use SSH (`git@github.com:...`) instead of HTTPS for the remote
+- Use an explicit allowlist in `.gitignore` rather than a blocklist
+- Never put credentials, API keys, or account IDs in `CLAUDE.md` or `settings.json`
+- Keep cloud credentials in their respective CLI config files (`~/.aws/credentials`, etc.), not here
+- If using a public repo, review every commit before pushing
+- Use SSH (`git@github.com:...`) instead of HTTPS for the remote
+
+---
+
+## Frequently Asked Questions
+
+### Does this work on Linux and macOS?
+
+Yes. The shell function works on any system with `bash` or `zsh`. The Kiro sync section is macOS-only because Kiro currently targets macOS.
+
+### Can I use this with a private GitHub repo?
+
+Yes. Set `--private` instead of `--public` when creating the repo with `gh repo create`. Everything else works the same.
+
+### What happens if two machines push at the same time?
+
+The second push will fail with a non-fast-forward error. Run `git -C ~/.claude pull --rebase origin main` and push again. The shell function handles most cases automatically.
+
+### Is it safe to make the repo public?
+
+Yes, as long as you never commit secrets, API keys, credentials, or personal information. The `.gitignore` excludes sensitive files by default. Review every commit before pushing.
+
+### Can I sync Claude Code config without GitHub?
+
+Yes. You can use any Git remote: GitLab, Bitbucket, or a self-hosted server. Replace the `git@github.com:...` URL with your remote.
+
+### How do I add a new file to the sync?
+
+Add it to the allowlist in `.gitignore` (with a `!` prefix) and to the `git add` line in the shell function.
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING](CONTRIBUTING.md) for more information.
+
+---
+
+## Security
+
+If you discover a potential security issue in this project, notify AWS/Amazon Security via the [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public GitHub issue.
+
+---
+
+## License
+
+This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file for details.
