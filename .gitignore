@@ -33,3 +33,4 @@ project_clones/
 !hooks/
 !agents/
 !rules/
+.DS_Store
